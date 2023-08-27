@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
 import { WrapButton, ButtonMore } from './Button.styled';
 
-const Button = ({ onclick }) => {
+export default function Button ({ onclick }) {
   return (
     <WrapButton>
       <ButtonMore type="button" onClick={onclick}>
@@ -11,7 +11,6 @@ const Button = ({ onclick }) => {
   );
 };
 
-export default Button;
 Button.propTypes = {
   onClick: PropTypes.func,
 };

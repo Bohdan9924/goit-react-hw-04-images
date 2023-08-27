@@ -3,7 +3,7 @@ const KEY = '37824145-be18cc7d6cb834b81dd7f47f7';
 export const getFetch = async ({ search, page}) => {
     const params = new URLSearchParams({
       q: search,
-      per_page: 10,
+      per_page: 12,
       image_type: 'photo',
       page: page,
       orientation: 'horizontal',
@@ -14,7 +14,7 @@ export const getFetch = async ({ search, page}) => {
     );
 
     if (!respons.ok) {
-      throw new Error('An error has occurred. Try again.');
+      throw new Error('Unfortunately, an error occurred. Try again.');
     }
 
     const data = await respons.json();

@@ -1,118 +1,105 @@
 import PropTypes from 'prop-types';
-import { Component } from 'react';
-
+import { useState, useEffect } from 'react';
 import ImageGalleryItem from './ImageGalleryItem';
 import { Loader } from 'components/Loader/Loader';
 import Button from 'components/Button/Button';
 
+import { getFetch } from 'services/fetch';
+
 import { List, LoaderWrapper, TextMassage } from './ItemGallery.styled';
 
-const KEY = '37824145-be18cc7d6cb834b81dd7f47f7';
+export default function ImageGallery({ searchName }) {
+  const [data, setData] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [status, setStatus] = useState('idle');
+  const [secondFetch, setSecondFetch] = useState(1);
 
-class ImageGallery extends Component {
-  state = {
-    data: [],
-    total: 0,
-    page: 1,
-    status: 'idle',
-    error: null,
+  useEffect(() => {
+    if (!searchName) {
+      return;
+    }
+    const getAsyncFetch = async () => {
+      setSecondFetch(1);
+      setData([]);
+      setTotal(0);
+      setPage(1);
+      setStatus('pending');
+
+      getFetch({
+        search: searchName,
+        page: 1,
+      })
+        .then(({ hits, total }) => {
+          console.log(hits);
+          setData([...hits]);
+          setTotal(total);
+          setStatus('resolved');
+        })
+        .catch(er => setStatus('rejected'));
+    };
+    getAsyncFetch();
+  }, [searchName]);
+
+  useEffect(() => {
+    if (secondFetch === 1) {
+      return;
+    }
+    const getAsyncFetch = async () => {
+      getFetch({
+        search: searchName,
+        page: page,
+      })
+        .then(({ hits }) => {
+          setData(prev => [...prev, ...hits]);
+        })
+        .catch(er => setStatus('rejected'));
+    };
+    getAsyncFetch();
+  }, [page, searchName, secondFetch]);
+
+  const handleClickButtonMore = () => {
+    setPage(prevState => prevState + 1);
+    setSecondFetch(2);
   };
 
-  async componentDidUpdate(prevProps, prevState) {
-    if (prevProps.searchName !== this.props.searchName) {
-      try {
-        this.setState({ page: 1, data: [], total: 0, status: 'pending' });
-        const { total, hits } = await this.getFetch();
+  const Items = data.length ? (
+    <>
+      <List>
+        {data.map(el => (
+          <ImageGalleryItem item={el} key={el.id} />
+        ))}
+      </List>
+      {data.length < 12 || total === data.length ? null : (
+        <Button onclick={handleClickButtonMore} />
+      )}
+    </>
+  ) : "Unfortunately, the photo was not found";
 
-        this.setState({ data: hits, total, status: 'resolved' });
-      } catch {
-        this.setState({ status: 'rejected' });
-      }
-    }
-
-    if (prevState.page !== this.state.page) {
-      const { hits } = await this.getFetch();
-      if (prevProps.searchName !== this.props.searchName) {
-        this.setState({ data: hits });
-        return;
-      }
-      this.setState({ data: [...prevState.data, ...hits] });
-    }
+  if (status === 'idle') {
+    return (
+      <LoaderWrapper>
+        <TextMassage>Find the photo you need</TextMassage>
+      </LoaderWrapper>
+    );
   }
 
-  getFetch = async () => {
-    const params = new URLSearchParams({
-      q: this.props.searchName,
-      per_page: 12,
-      image_type: 'photo',
-      page: this.state.page,
-      orientation: 'horizontal',
-    });
-
-    const respons = await fetch(
-      `https://pixabay.com/api/?key=${KEY}&${params}`
+  if (status === 'pending') {
+    return (
+      <LoaderWrapper>
+        <Loader />
+      </LoaderWrapper>
     );
+  }
 
-    if (!respons.ok) {
-      throw new Error('You have error. Try more.');
-    }
+  if (status === 'resolved') {
+    return Items;
+  }
 
-    const data = await respons.json();
-
-    return data;
-  };
-
-  handleClickButtonMore = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-    }));
-    this.getFetch();
-  };
-
-  render() {
-    const { data, total, status } = this.state;
-
-    const Items = data.length ? (
-      <>
-        <List>
-          {data.map(el => (
-            <ImageGalleryItem item={el} key={el.id} />
-          ))}
-        </List>
-        {data.length < 12 || total === data.length ? null : (
-          <Button onclick={this.handleClickButtonMore} />
-        )}
-      </>
-    ) : (
-      'Photo not found'
-    );
-
-    if (status === 'idle') {
-      return (
-        <LoaderWrapper>
-          <TextMassage>Search photo would yoy want!</TextMassage>
-        </LoaderWrapper>
-      );
-    }
-
-    if (status === 'pending') {
-      return (
-        <LoaderWrapper>
-          <Loader />
-        </LoaderWrapper>
-      );
-    }
-
-    if (status === 'resolved') {
-      return Items;
-    }
-
-    if (status === 'rejected') {
-      return <span>You have error. Try more.</span>;
-    }
+  if (status === 'rejected') {
+    return "Unfortunately, an error occurred. Try again.";
   }
 }
-export default ImageGallery;
 
 ImageGallery.propTypes = {
   searchName: PropTypes.string.isRequired,
